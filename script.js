@@ -12,32 +12,11 @@ window.onload = function() {
         eye2 = document.getElementById('eye2').src,
         reflection = document.getElementById('reflection').src,
         detectorLight = document.getElementById('detectorLight').src,
-        robotsprite = document.getElementById('robotsprite').src
+        robotsprite = document.getElementById('robotsprite').src, 
+        
+
     ] 
-    
-    class particles {
-        constructor(x, y, radius, color, velocity) {
-            this.x = x;
-            this.y = y;
-            this.radius = radius;
-            this.color = color;
-            this.velocity = velocity;
-        }
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); // draw circle
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            ctx.closePath();
-        }
-        update() {
-            this.draw();
-            this.x = this.x + this.velocity.x;
-            this.y = this.y + this.velocity.y;
-        }
-    }
-
-
+   
     class Robot {
         constructor(canvas, ctx, robotImages = []) {
             this.canvas = canvas;
@@ -48,6 +27,7 @@ window.onload = function() {
             this.x = canvas.width / 2 * 1.5;   //   
             this.y = canvas.height / 2 * 1.3;
             this.angle = 0;
+            
 
             // sprite of the robot
             this.spriteWidth = 370;
@@ -56,8 +36,13 @@ window.onload = function() {
             this.maxFrame = 75;
 
             // other robot options 
-            this.followMode = true    ; 
-            this.speedOfTheRobot = 2.75 ;
+            this.maintenance = false ;
+            this.speedOfTheRobot = 0.01 ;
+            this.modes = ['maintenance', 'target']
+            this.primaryTarget = {
+                x: this.canvas.width / 2 , 
+                y: this.canvas.height / 2
+            }
             // mouse position and interactivity 
             this.mouse = {
                 x: 0,
@@ -68,6 +53,9 @@ window.onload = function() {
                 this.mouse.y = e.offsetY ;
                 this.draw();
             }); 
+            this.canvas.addEventListener('mouseleave', ()=>{
+                this.scanning = true 
+            })
 
             
             
@@ -92,12 +80,14 @@ window.onload = function() {
             // inner eye 
             this.eye1 = new Image();
             this.eye1.src = robotImages[1];
+            if(!this.draweyes){
             ctx.drawImage(this.eye1,this.x + Math.cos(this.angle) * this.eye1radius - this.eye1.width * 0.5, this.y + Math.sin(this.angle) * this.eye1radius - this.eye1.height * 0.5);    
-
+            }
             this.eye2 = new Image();
             this.eye2.src = robotImages[2];
-            ctx.drawImage(this.eye2,this.x + Math.cos(this.angle) * this.eye2radius - this.eye2.width * 0.5, this.y + Math.sin(this.angle) * this.eye2radius - this.eye2.height * 0.5);        
-        
+            if(!this.draweyes){
+                ctx.drawImage(this.eye2,this.x + Math.cos(this.angle) * this.eye2radius - this.eye2.width * 0.5, this.y + Math.sin(this.angle) * this.eye2radius - this.eye2.height * 0.5);            
+            }            
             // reflections image
             this.reflection = new Image();
             this.reflection.src = robotImages[3];
@@ -106,41 +96,39 @@ window.onload = function() {
             
             this.detectorLight = new Image();
             this.detectorLight.src = robotImages[4];
-            if(this.followMode){
+            if(this.maintenance){
                 ctx.drawImage(this.detectorLight,this.x - this.detectorLight.width * 0.5, this.y - this.detectorLight.height * 0.5 + - 200 );
+                this.draweyes = false ; 
             }
             
             ctx.closePath();
         }
         update() {
+
             // angle of eye of the robot
             const dx = this.mouse.x - this.x;
             const dy = this.mouse.y - this.y;
             this.angle = Math.atan2(dy, dx);
-            
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Orbit the robot around the mouse position if distance is 0
+
+
+            // speed of the robot and behaviour 
+            if(distance <= this.radius * 4 ){
+                this.speedOfTheRobot -= 0.05 ;  
+            }
+            else{
+                this.speedOfTheRobot +=  0.2
+            }
 
             if (distance >= this.radius * 1.5 ) {
-                
-                if(distance <= this.radius * 2.5 ){
-                    this.speedOfTheRobot =  0.2    
-                }
-                else{
-                    this.speedOfTheRobot +=  0.05 
-                }
-                
-
-
-                this.eye1radius = this.radius *  0.35 ;       // larger eye
+                this.eye1radius = this.radius *  0.4;       // larger eye
                 this.eye2radius = this.radius *  0.6  ;  // smaller innet pupil eye 
                             
                 this.eye1distance = this.eye1radius;
                 this.eye2distance = this.eye2radius
     
                
-                this.followMode = false    ;
+                
                     // frames of the robotsprite
                     this.frameX >= this.maxFrame ? this.frameX = 0 : this.frameX++;
 
@@ -153,19 +141,40 @@ window.onload = function() {
                     if (distance >= this.eye2distance * 2 ) {
                         // this.x += Math.cos(this.movementangle) * this.speedOfTheRobot * 5; // speed of the robot
                         // this.y += Math.sin(this.movementangle) * this.speedOfTheRobot * 5; // speed of the robot
-                    }
-    
-                
+                    }               
+                    this.maintenance = false ; 
             }
             else{
-                
-                this.followMode = true; 
-                
-                this.eye1radius = this.radius *  0.03;       // larger eye
-                this.eye2radius = this.radius *  0.2     ;  // smaller innet pupil eye 
+            
+                this.eye1radius = this.radius *  0.035;       // larger eye
+                this.eye2radius = this.radius *  0.06     ;  // smaller innet pupil eye 
                             
                 this.eye1distance = this.eye1radius;
                 this.eye2distance = this.eye2radius
+                
+                if(distance * 2 === this.eye2radius ){
+                    
+                    this.movementangle = Math.atan2(this.mouse.y - this.y, this.mouse.x - this.x);
+    
+                    this.x += Math.cos(this.movementangle) * this.speedOfTheRobot;  // speed of the robot
+                    this.y += Math.sin(this.movementangle) * this.speedOfTheRobot;  // speed of the robot
+                }else{
+                    // turn light off.
+                    this.maintenance = true ; 
+                    this.movementangle = Math.atan2(this.primaryTarget.y - this.y, this.primaryTarget.x - this.x);
+    
+                    this.x += Math.cos(this.movementangle) * this.speedOfTheRobot;  // speed of the robot
+                    this.y += Math.sin(this.movementangle) * this.speedOfTheRobot;  // speed of the robot
+
+                    this.eye1radius = this.radius *  -0.4;       // larger eye
+                    this.eye2radius = this.radius *  -0.3     ;  // smaller innet pupil eye 
+                    this.speedOfTheRobot = 0.01
+                    
+                
+                }
+                    
+    
+                    
     
             }                 
 
@@ -178,6 +187,7 @@ window.onload = function() {
 
     const robot = new Robot(canvas, ctx, robotImages);
     robot.draw();
+
     animate();
     function animate() {
         requestAnimationFrame(animate);
