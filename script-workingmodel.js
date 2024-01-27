@@ -7,7 +7,7 @@ window.onload = function() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const robotImages = [] = [    
+    const robotImages = [    
         bodyrobot = document.getElementById('bodyrobot').src,
         eye1 = document.getElementById('eye1').src,
         eye2 = document.getElementById('eye2').src,
@@ -52,11 +52,6 @@ window.onload = function() {
                 this.mouse.y = e.offsetY ;
                 this.draw();
             }); 
-            this.canvas.addEventListener('mouseleave', ()=>{
-                this.scanning = true 
-            })
-
-            
             
         }
         
